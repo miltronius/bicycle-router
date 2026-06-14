@@ -1,0 +1,265 @@
+@import "tailwindcss";
+
+/* ===================================================================
+   ZürichVelo design tokens — exposed as Tailwind utilities via @theme
+   =================================================================== */
+@theme {
+  /* Palette */
+  --color-paper:       #f4efe6;
+  --color-paper-2:     #ebe4d6;
+  --color-paper-3:     #ddd3bf;
+  --color-ink:         #1c1f26;
+  --color-ink-soft:    #4a4d54;
+  --color-ink-muted:   #8a8775;
+  --color-line:        #c9b896;
+  --color-line-soft:   #d8caa9;
+  --color-alpine:      #c83737;
+  --color-alpine-deep: #9e2424;
+
+  /* Typography */
+  --font-family-display: 'Fraunces', serif;
+  --font-family-mono:    'IBM Plex Mono', monospace;
+  --font-family-sans:    'IBM Plex Sans', system-ui, sans-serif;
+
+  /* Shadows */
+  --shadow-card: 0 4px 8px rgba(28,31,38,0.06), 0 8px 24px rgba(28,31,38,0.08);
+  --shadow-soft: 0 1px 2px rgba(28,31,38,0.04), 0 1px 3px rgba(28,31,38,0.06);
+}
+
+/* ===================================================================
+   Base
+   =================================================================== */
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-family-sans);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ===================================================================
+   App grid — named-area layout that Tailwind can't express cleanly
+   =================================================================== */
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-width, 320px) 1fr;
+  grid-template-rows: 1fr auto;
+  grid-template-areas: "sidebar map" "sidebar elevation";
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+}
+.area-sidebar   { grid-area: sidebar; }
+.area-map       { grid-area: map; position: relative; min-height: 400px; }
+.area-elevation { grid-area: elevation; }
+
+@media (max-width: 767px) {
+  /* Map fills the whole viewport */
+  .app {
+    display: block;
+    height: 100vh;
+    width: 100vw;
+  }
+  .area-map {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    min-height: 100vh !important;
+  }
+
+  /* Sidebar becomes a bottom sheet */
+  .area-sidebar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 300;
+    height: 65vh;
+    max-height: 90vh;
+    border-right: none !important;
+    border-top: 1px solid var(--color-line-soft);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 40px rgba(28,31,38,0.20);
+    transform: translateY(100%);
+    transition: transform 0.32s cubic-bezier(.2,.8,.2,1);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .area-sidebar.mobile-open { transform: translateY(0); }
+
+  /* Elevation and resize handles hidden on mobile */
+  .area-elevation { display: none; }
+  .sidebar-resize-handle { display: none; }
+  .resize-handle-y { display: none; }
+
+  /* Sheet drag handle pill */
+  .sheet-handle {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 4px;
+  }
+  .sheet-handle::after {
+    content: '';
+    width: 36px; height: 4px;
+    border-radius: 2px;
+    background: var(--color-line);
+  }
+}
+
+/* ===================================================================
+   Sidebar decorative background (contour-line pattern + gradient)
+   =================================================================== */
+.sidebar-bg {
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(200,55,55,0.04), transparent 40%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><g fill='none' stroke='%23c9b896' stroke-width='0.5' opacity='0.35'><path d='M0,100 Q50,60 100,90 T200,80'/><path d='M0,130 Q50,90 100,120 T200,110'/><path d='M0,160 Q50,120 100,150 T200,140'/><path d='M0,70 Q50,30 100,60 T200,50'/><path d='M0,40 Q50,0 100,30 T200,20'/></g></svg>");
+  background-repeat: no-repeat, repeat;
+  background-size: 100% 60%, 240px 240px;
+}
+
+/* ===================================================================
+   Route card — left color-bar pseudo-element uses a dynamic CSS var
+   =================================================================== */
+.route-card {
+  position: relative;
+  overflow: hidden;
+}
+.route-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--route-color);
+  opacity: 0.5;
+  transition: opacity 0.18s, width 0.18s;
+}
+.route-card.active::before {
+  opacity: 1;
+  width: 5px;
+}
+.route-card.active {
+  border-color: var(--route-color) !important;
+}
+
+/* ===================================================================
+   Elevation panel — slide open/closed
+   =================================================================== */
+.elevation-panel {
+  height: 0;
+  overflow: hidden;
+  transition: height 0.35s cubic-bezier(.2,.8,.2,1);
+}
+.elevation-panel.open {
+  height: var(--elevation-height, 160px);
+}
+
+/* ===================================================================
+   Leaflet overrides
+   =================================================================== */
+.leaflet-container {
+  font-family: var(--font-family-sans);
+  background: var(--color-paper-2);
+}
+.leaflet-control-zoom a {
+  background: var(--color-paper) !important;
+  color: var(--color-ink) !important;
+  border-color: var(--color-line) !important;
+  font-family: var(--font-family-display) !important;
+}
+.leaflet-control-attribution {
+  background: rgba(244,239,230,0.85) !important;
+  font-size: 10px !important;
+  font-family: var(--font-family-mono) !important;
+}
+
+/* ===================================================================
+   Keyframes
+   =================================================================== */
+@keyframes velo-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.25); }
+}
+@keyframes velo-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.animate-velo-pulse {
+  animation: velo-pulse 1.6s ease-in-out infinite;
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--color-paper-3), var(--color-paper-2), var(--color-paper-3));
+  background-size: 200% 100%;
+  color: transparent !important;
+  animation: velo-shimmer 1.4s linear infinite;
+}
+
+/* ===================================================================
+   Custom map marker (rendered via Leaflet divIcon HTML)
+   =================================================================== */
+.marker-pin { width: 32px; height: 40px; }
+.marker-pin .pin-body {
+  width: 32px; height: 32px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #fff;
+}
+.marker-pin .pin-body span {
+  transform: rotate(45deg);
+  font-family: var(--font-family-display);
+  font-weight: 600; color: #fff; font-size: 14px;
+}
+.marker-pin.a .pin-body { background: var(--color-ink); }
+.marker-pin.b .pin-body { background: var(--color-alpine); }
+
+/* ===================================================================
+   Resize handles
+   =================================================================== */
+
+/* Sidebar — sits at the grid seam in App, outside the sidebar's overflow context */
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: var(--sidebar-width, 320px);
+  width: 14px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+  z-index: 200;
+}
+.sidebar-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 50%; width: 3px;
+  transform: translateX(-50%);
+  background: transparent;
+  transition: background 0.15s;
+}
+.sidebar-resize-handle:hover::after,
+.sidebar-resize-handle:active::after { background: var(--color-line); }
+
+/* Elevation — sits on the top edge of the elevation panel */
+.resize-handle-y {
+  position: absolute; top: 0; left: 0; right: 0; height: 8px;
+  cursor: ns-resize; z-index: 20;
+}
+.resize-handle-y::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: transparent; transition: background 0.15s;
+}
+.resize-handle-y:hover::after,
+.resize-handle-y:active::after { background: var(--color-line); }
+
+/* ===================================================================
+   Scrollbar styling for sidebar
+   =================================================================== */
+.area-sidebar::-webkit-scrollbar       { width: 8px; }
+.area-sidebar::-webkit-scrollbar-track { background: transparent; }
+.area-sidebar::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 4px; }
+.area-sidebar::-webkit-scrollbar-thumb:hover { background: var(--color-ink-muted); }
