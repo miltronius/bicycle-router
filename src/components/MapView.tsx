@@ -107,13 +107,11 @@ export default function MapView({
     // Manual layer-picker (user can override auto-selected tile provider)
     const selectables: Record<string, L.TileLayer> = {};
     TILE_PROVIDERS.forEach(p => { selectables[p.name] = L.tileLayer(p.url, p.opts); });
-    L.control.layers(selectables, undefined, { position: 'topleft', collapsed: true })
-      .addTo(map)
-      .getContainer()
-      .addEventListener('click', () => {
-        if (tileTimerRef.current !== null) clearTimeout(tileTimerRef.current);
-        setTileStatus(null);
-      });
+    const layerControl = L.control.layers(selectables, undefined, { position: 'topleft', collapsed: true }).addTo(map);
+    layerControl.getContainer()?.addEventListener('click', () => {
+      if (tileTimerRef.current !== null) clearTimeout(tileTimerRef.current);
+      setTileStatus(null);
+    });
 
     // Route click / map-point placement
     const validBounds = L.latLngBounds(BOUNDS_SW, BOUNDS_NE);

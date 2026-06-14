@@ -80,7 +80,7 @@ export default function ElevationPanel({ route, onHoverChange, onResizeStart }: 
             cornerRadius:    4,
             callbacks: {
               title: items => `${parseFloat(items[0].label).toFixed(2)} km`,
-              label: ctx   => `${Math.round(ctx.parsed.y)} m`,
+              label: ctx   => `${Math.round(ctx.parsed.y ?? 0)} m`,
             },
           },
         },
