@@ -60,6 +60,132 @@ before stopovers (#10) and scenic loops (#9). Geolocation (#3) comes before live
 
 ---
 
+## 2a. Your open issues — triage
+
+State on GitHub: 10 open issues, all created 15–16 Jun 2026. None have labels or
+comments. Eight have a title only. #9, #10 and #11 have one line each. #11 is the only
+unassigned issue.
+Suggested labels: `phase:0`–`phase:7`, `size:S/M/L`, `area:map`, `area:live`,
+`area:routing`, `area:mobile`.
+
+| # | Title (as filed) | What's in the issue | Phase | Size | Priority | Depends on |
+|---|---|---|---|---|---|---|
+| #8 | Add Url Query Params | title only | 1 | S | **P1** | — (but plan the format for #2) |
+| #3 | Option to show the current location on the map | title only | 1 | S | **P1** | — |
+| #5 | Toggle estimated average km/h per route | title only | 1 | S | P2 | — |
+| #2 | Option to add multiple waypoints | title only | 1 | L | **P1** | #8 (URL format) |
+| #6 | Add live mode | title only | 2 | L | **P1** | #3 |
+| #10 | Live Mode: Add Stopovers | "Find closest: shops, gas station, fountains, hotels, restaurants etc." | 3 | M | P1 | #2, #6 |
+| #4 | show watt output per route | title only | 4 | M | P2 | #5 (shared speed/physics model) |
+| #11 | Show detailed Route segmentation | safe / medium / not-so-safe segments, bike paths, crossings, accident hotspots | 5 | M | P2 | — (reuses the Phase 4 parser) |
+| #7 | Mobile mode: Hide overlay by swiping | title only | 6 | S | P2 | — (can be pulled forward) |
+| #9 | Scenic Waypoints & Route automation | "route up to 2 hours + modifier: I want to see a waypoint, fountain…" | 7 | L | P3 | #2, #5, #10, #11 |
+
+### Per-issue spec and acceptance criteria
+
+Paste these into the issue bodies so each issue has a clear "done".
+
+**#8 — URL query params**
+- Encode the waypoints, active profile, active route index and basemap, e.g.
+  `?wp=47.3773,8.5374|47.2752,8.4528&p=trekking&map=swisstopo`.
+- [ ] Opening a shared link restores the exact same routes and selection.
+- [ ] The URL updates with `replaceState` on every change, without adding history spam.
+- [ ] Invalid or out-of-bounds params fall back to the defaults without crashing.
+- [ ] A "Copy link" button exists.
+- Use a **list** of waypoints (`wp=`), not `a=` / `b=`, so #2 doesn't break old links.
+
+**#3 — Current location**
+- [ ] A locate button shows a blue dot with an accuracy circle, and the map recentres on it.
+- [ ] The button offers "Use as start (A)".
+- [ ] Permission denied or timeout shows a friendly message.
+- [ ] Location outside Switzerland shows a message instead of a broken route.
+- The `useGeolocation` hook it introduces is the base for #6.
+
+**#5 — Average km/h toggle**
+- Interpretation: let the user set their own pace, and show time and average speed per route
+  from that pace instead of BRouter's fixed estimate.
+- [ ] Speed presets (15 / 20 / 25 / custom) are saved in `localStorage`.
+- [ ] Each route card shows "Ø xx km/h" and the time at that pace.
+- [ ] The time adjusts for gradient (uphill slower), using the same model as #4.
+- [ ] A toggle switches between "BRouter estimate" and "my pace".
+
+**#2 — Multiple waypoints**
+- [ ] The data model changes from `pointA` / `pointB` to `waypoints: Point[]`.
+- [ ] The BRouter call uses `lonlats=a|b|c…`.
+- [ ] You can add a stop, remove a stop and reorder by dragging in the sidebar.
+- [ ] Dragging the route line on the map inserts a via point.
+- [ ] Pins are labelled A, B, C…
+- [ ] GPX export and the URL (#8) include all waypoints.
+- This is the largest refactor, and it unblocks #10 and #9.
+
+**#6 — Live mode**
+- The full spec is in Phase 2 below.
+- [ ] "Start ride" opens a fullscreen HUD showing speed, distance left, ETA, climb left and the next notable item.
+- [ ] The map follows the position, and the elevation chart shows progress.
+- [ ] Going off-route for more than 40 m for more than 8 s triggers an automatic reroute.
+- [ ] The screen stays on (Wake Lock).
+- [ ] The ride can be saved as GPX.
+- Covers fountains, bike paths and e-bikes as asked in chat: the POI part is #10, the
+  overlay part is Phase 3, and e-bike support is Phase 4.
+
+**#10 — Stopovers (find closest)**
+- The issue lists shops, gas stations, fountains, hotels and restaurants. Also add: repair
+  stations, e-bike charging, toilets, train stations and bike parking. The OSM tag
+  mapping is in Phase 3.
+- [ ] "Find closest ▸ category" ranks results by distance **ahead along the route**
+  (not straight-line) and shows the detour in km and minutes.
+- [ ] "Add as stop" inserts the place as a waypoint (needs #2) and reroutes.
+- [ ] It works in planning mode too, not only in live mode.
+- [ ] Overpass results are cached per route, with no more than one query per route change.
+
+**#4 — Watt output**
+- [ ] A rider profile stores bike type and system mass.
+- [ ] Each route card shows average watts, kJ and kcal at your pace (#5), or the time at a given wattage.
+- [ ] The elevation chart tooltip shows the power needed at the hovered point.
+- [ ] For e-bikes, it shows estimated battery % and warns if the battery won't last the route.
+- Unit-test the physics against a known reference, e.g. 75 kg + 10 kg at 200 W on flat
+  ground ≈ 30 km/h on a road bike.
+
+**#11 — Route segmentation**
+- [ ] Parse BRouter `WayTags` per segment and classify each as safe, medium or exposed.
+  The rules are in Phase 5.
+- [ ] A "Colour by safety" toggle colours the line on the map.
+- [ ] Each route card shows a % bar.
+- [ ] Crossings and traffic signals are counted.
+- [ ] An optional accident-hotspot overlay comes from ASTRA/geo.admin.ch data.
+- [ ] A legend explains the classes.
+- Assign this issue — it's the only unassigned one.
+
+**#7 — Swipe to hide overlay**
+- [ ] The bottom sheet has three snap points (peek / half / full) and follows the finger during a drag (pointer events).
+- [ ] A fast flick snaps to the next point.
+- [ ] The map stays usable while the sheet is at peek.
+- This is small and independent, so it can be done in Phase 1 for a quick mobile
+  improvement.
+
+**#9 — Scenic waypoints & route automation**
+- Interpretation: "Give me a route of at most 2 h (or N km) from here, optionally a loop,
+  that passes things I care about (fountain, viewpoint, lake, café)."
+- [ ] Input: start point, time or distance budget, loop or A→B, and a "must include" list of categories.
+- [ ] Output: 3 candidate routes, each with the scenic POIs it passes listed.
+- [ ] Every candidate fits within ±10 % of the budget.
+- Algorithm sketch is in Phase 7. It depends on #2, #5, #10 and #11.
+- Consider splitting into **#9a time-boxed loop** and **#9b must-pass POIs**.
+
+### Gaps: work not covered by any issue (suggest opening)
+
+1. CI + tests + lint (Phase 0)
+2. Nominatim autocomplete policy violation, switch to Photon (Phase 0)
+3. Bug: loading spinner stuck after clearing a point during a fetch
+4. Bug: layer picker leaves the auto tile layer underneath
+5. Bike-path overlays (Veloland / SchweizMobil, CyclOSM) — mentioned in chat, no issue yet
+6. E-bike routing profiles and battery estimate — mentioned in chat, no issue yet. Could
+   be a sub-issue of #4.
+7. Profile picker (choose which of the 5+ profiles to fetch)
+8. Merge Dependabot PR #12 (vite 6.4.2 → 6.4.3) once CI exists
+
+---
+
 ## 3. Phase details & specifications
 
 ### Phase 0 — Foundations (week 1)
