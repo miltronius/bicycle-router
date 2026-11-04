@@ -15,6 +15,7 @@
   --color-line-soft:   #d8caa9;
   --color-alpine:      #c83737;
   --color-alpine-deep: #9e2424;
+  --color-via:         #2b6cb0;
 
   /* Typography */
   --font-family-display: 'Fraunces', serif;
@@ -90,6 +91,8 @@ body {
     overflow-x: hidden;
   }
   .area-sidebar.mobile-open { transform: translateY(0); }
+  .area-sidebar.sheet-full  { height: 92vh; max-height: 92vh; }
+  .is-live .area-sidebar { display: none; }
 
   /* Elevation and resize handles hidden on mobile */
   .area-elevation { display: none; }
@@ -100,7 +103,12 @@ body {
   .sheet-handle {
     display: flex;
     justify-content: center;
-    padding: 10px 0 4px;
+    padding: 12px 0 8px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--color-paper);
+    cursor: grab;
   }
   .sheet-handle::after {
     content: '';
@@ -217,6 +225,38 @@ body {
 }
 .marker-pin.a .pin-body { background: var(--color-ink); }
 .marker-pin.b .pin-body { background: var(--color-alpine); }
+.marker-pin.via .pin-body { background: var(--color-via); }
+
+/* POI marker (#10) */
+.poi-pin {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #fff; border: 1.5px solid var(--color-line);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+.poi-popup { font-family: var(--font-family-sans); min-width: 180px; }
+.poi-popup-title { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+.poi-popup-meta { font-family: var(--font-family-mono); font-size: 10.5px; color: var(--color-ink-soft); }
+.poi-popup-btn {
+  margin-top: 8px; width: 100%; padding: 5px 8px; border-radius: 6px; cursor: pointer;
+  background: var(--color-ink); color: var(--color-paper);
+  font-family: var(--font-family-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.poi-popup-btn:hover { background: var(--color-alpine); }
+
+/* User location (#3) */
+.user-dot {
+  position: relative; width: 22px; height: 22px; border-radius: 50%;
+  background: #2b6cb0; border: 3px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.15), 0 2px 8px rgba(43,108,176,0.5);
+}
+.user-heading {
+  position: absolute; left: 50%; top: 50%; width: 0; height: 0; margin-left: -6px; margin-top: -24px;
+  border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 12px solid #2b6cb0;
+  transform-origin: 6px 24px;
+}
+
+/* Live mode hides decorative map chrome */
+.is-live .hide-live { display: none !important; }
 
 /* ===================================================================
    Resize handles
@@ -231,6 +271,7 @@ body {
   transform: translateX(-50%);
   cursor: ew-resize;
   z-index: 200;
+  touch-action: none;
 }
 .sidebar-resize-handle::after {
   content: '';
@@ -247,7 +288,7 @@ body {
 /* Elevation — sits on the top edge of the elevation panel */
 .resize-handle-y {
   position: absolute; top: 0; left: 0; right: 0; height: 8px;
-  cursor: ns-resize; z-index: 20;
+  cursor: ns-resize; z-index: 20; touch-action: none;
 }
 .resize-handle-y::after {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;

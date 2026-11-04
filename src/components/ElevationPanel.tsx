@@ -3,25 +3,36 @@ import {
   Chart, LineController, LineElement, PointElement,
   LinearScale, Filler, Tooltip,
 } from 'chart.js';
-import type { ActiveElement, ChartEvent } from 'chart.js';
+import type { ActiveElement, ChartEvent, Plugin } from 'chart.js';
 import type { Route, HoverLatLng } from '../types';
+import type { RiderSettings } from '../lib/physics';
+import { powerAtGrade } from '../lib/physics';
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, Filler, Tooltip);
 
 interface Props {
   route:          Route | null;
+  rider:          RiderSettings;
+  /** Live mode: distance (m) already ridden — shaded on the chart. */
+  progressDist:   number | null;
   onHoverChange:  (point: HoverLatLng | null) => void;
-  onResizeStart:  (e: React.MouseEvent) => void;
+  onResizeStart:  (e: React.PointerEvent) => void;
 }
 
-export default function ElevationPanel({ route, onHoverChange, onResizeStart }: Props) {
+export default function ElevationPanel({ route, rider, progressDist, onHoverChange, onResizeStart }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const chartRef     = useRef<Chart | null>(null);
   const onHoverRef   = useRef(onHoverChange);
+  const riderRef     = useRef(rider);
+  const progressRef  = useRef(progressDist);
   useEffect(() => { onHoverRef.current = onHoverChange; }, [onHoverChange]);
+  useEffect(() => { riderRef.current = rider; }, [rider]);
+  useEffect(() => {
+    progressRef.current = progressDist;
+    chartRef.current?.draw();
+  }, [progressDist]);
 
   useEffect(() => {
-    // Destroy previous chart and clear hover marker
     if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
     onHoverRef.current(null);
 
@@ -35,6 +46,34 @@ export default function ElevationPanel({ route, onHoverChange, onResizeStart }: 
     const grad = ctx.createLinearGradient(0, 0, 0, 400);
     grad.addColorStop(0, route.color + 'cc');
     grad.addColorStop(1, route.color + '10');
+
+    // Grade (%) at each point, from the previous point
+    const grades = profile.map((p, i) => {
+      if (i === 0) return 0;
+      const d = p.distance - profile[i - 1].distance;
+      return d > 0 ? ((p.elevation - profile[i - 1].elevation) / d) * 100 : 0;
+    });
+
+    // Shade the part already ridden in live mode
+    const progressPlugin: Plugin<'line'> = {
+      id: 'progress',
+      afterDatasetsDraw(chart) {
+        const d = progressRef.current;
+        if (d === null || d === undefined) return;
+        const { ctx: c, chartArea, scales } = chart;
+        const x = scales.x.getPixelForValue(d / 1000);
+        c.save();
+        c.fillStyle = 'rgba(28,31,38,0.12)';
+        c.fillRect(chartArea.left, chartArea.top, Math.max(0, x - chartArea.left), chartArea.bottom - chartArea.top);
+        c.strokeStyle = '#1c1f26';
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(x, chartArea.top);
+        c.lineTo(x, chartArea.bottom);
+        c.stroke();
+        c.restore();
+      },
+    };
 
     chartRef.current = new Chart(ctx, {
       type: 'line',
@@ -54,6 +93,7 @@ export default function ElevationPanel({ route, onHoverChange, onResizeStart }: 
           pointHoverBorderWidth:   2,
         }],
       },
+      plugins: [progressPlugin],
       options: {
         responsive:         true,
         maintainAspectRatio: false,
@@ -80,7 +120,11 @@ export default function ElevationPanel({ route, onHoverChange, onResizeStart }: 
             cornerRadius:    4,
             callbacks: {
               title: items => `${parseFloat(items[0].label).toFixed(2)} km`,
-              label: ctx   => `${Math.round(ctx.parsed.y ?? 0)} m`,
+              label: c => {
+                const g = grades[c.dataIndex] ?? 0;
+                const w = Math.round(powerAtGrade(g / 100, riderRef.current));
+                return [`${Math.round(c.parsed.y ?? 0)} m`, `${g >= 0 ? '+' : ''}${g.toFixed(1)} %`, `${w} W`];
+              },
             },
           },
         },
@@ -122,24 +166,11 @@ export default function ElevationPanel({ route, onHoverChange, onResizeStart }: 
     return <div className="area-elevation elevation-panel" />;
   }
 
-  const props   = route.data.features[0].properties;
-  const ascend  = parseInt(props['filtered ascend'] ?? props['plain-ascend'] ?? '0');
-  const len     = parseInt(props['track-length'] ?? '0');
-  const elevs   = route.profilePoints.map(p => p.elevation);
-  const minE    = Math.min(...elevs);
-  const maxE    = Math.max(...elevs);
-  const descend = Math.round(
-    route.profilePoints.reduce((acc, p, i, arr) => {
-      if (i === 0) return acc;
-      const diff = p.elevation - arr[i - 1].elevation;
-      return diff < 0 ? acc - diff : acc;
-    }, 0)
-  );
+  const s = route.summary;
 
   return (
     <div className="area-elevation elevation-panel open bg-paper border-t border-line relative flex flex-col">
-      <div className="resize-handle-y" onMouseDown={onResizeStart} />
-      {/* Stats header */}
+      <div className="resize-handle-y" onPointerDown={onResizeStart} />
       <div className="flex items-baseline justify-between px-6 pt-2.5 pb-1 shrink-0">
         <span className="font-display text-sm italic font-normal text-ink">
           Elevation along the{' '}
@@ -149,10 +180,10 @@ export default function ElevationPanel({ route, onHoverChange, onResizeStart }: 
         </span>
         <div className="flex gap-4 shrink-0 ml-4">
           {[
-            { v: (len / 1000).toFixed(1), u: 'km'        },
-            { v: `↑ ${ascend}`,           u: 'm'         },
-            { v: `↓ ${descend}`,          u: 'm'         },
-            { v: `${Math.round(minE)}–${Math.round(maxE)}`, u: 'm' },
+            { v: (s.lengthM / 1000).toFixed(1), u: 'km' },
+            { v: `↑ ${s.ascentM}`,  u: 'm' },
+            { v: `↓ ${s.descentM}`, u: 'm' },
+            { v: `${Math.round(s.minEle)}–${Math.round(s.maxEle)}`, u: 'm' },
           ].map(({ v, u }) => (
             <span key={u + v} className="font-mono text-[11px] text-ink-soft whitespace-nowrap">
               <span className="text-ink font-medium">{v}</span> {u}
@@ -161,9 +192,8 @@ export default function ElevationPanel({ route, onHoverChange, onResizeStart }: 
         </div>
       </div>
 
-      {/* Chart — flex-1 so it fills whatever height remains after the header */}
       <div className="flex-1 min-h-0 px-3 pb-2 relative">
-        <canvas ref={canvasRef} />
+        <canvas ref={canvasRef} aria-label="Elevation profile chart" role="img" />
       </div>
     </div>
   );
