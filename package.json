@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "dev:mock": "VITE_MOCK=1 vite",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "chart.js": "^4.4.0",
@@ -25,8 +27,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/leaflet": "^1.9.12",
+    "@types/node": "^22.20.5",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.1",
