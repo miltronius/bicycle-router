@@ -1,6 +1,6 @@
 import type { TileLayerOptions } from 'leaflet';
+import type { WaySegment, RouteSummary } from './lib/route';
 
-export type PointKey = 'a' | 'b';
 
 export interface Point {
   lat: number;
@@ -15,6 +15,8 @@ export interface Profile {
   tag: string;
   color: string;
   soft: string;
+  /** Fetched by default. */
+  default?: boolean;
 }
 
 export interface ElevationPoint {
@@ -43,6 +45,12 @@ export interface BRouterGeoJSON {
 export interface Route extends Profile {
   data: BRouterGeoJSON;
   profilePoints: ElevationPoint[];
+  /** Cumulative distance (m) at each geometry vertex. */
+  cum: number[];
+  /** OSM way-tag segments parsed from BRouter messages (for #11). */
+  segments: WaySegment[];
+  summary: RouteSummary;
+  signature: string;
 }
 
 export interface TileProvider {
