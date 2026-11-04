@@ -5,7 +5,49 @@ _Status as of 2026-11-04. Based on a review of the code on `main` (commit `027e5
 
 ---
 
-## 1. Where the project stands
+## 0. Progress log (updated as work lands)
+
+### 2026-11-04 — v0.2.0 on `claude/admiring-cray-1pgp03`
+
+| Item | Status | Notes |
+|---|---|---|
+| Phase 0: CI, Vitest, ESLint | ✅ | 47 unit tests on `src/lib/**`; CI runs lint, test and build |
+| Phase 0: bug fixes | ✅ | stuck spinner, duplicate tile layers, search race, AbortController, StrictMode `_leaflet_pos`, dynamic map badge |
+| Phase 0: Photon autocomplete, throttled Nominatim | ✅ | Nominatim only for reverse geocoding (≤ 1 req/s, cached) and as an Enter fallback |
+| Phase 0: env keys, swisstopo/CyclOSM basemaps, chunk split | ✅ | `.env.example` |
+| #8 URL params | ✅ | `?wp=…~name|…&p=…&map=…`, plus localStorage |
+| #3 Current location | ✅ | Locate button, accuracy circle, heading arrow, "From here" |
+| #5 Pace toggle / #4 Watts | ✅ | Physics model; e-bike battery % with warnings |
+| #2 Multiple waypoints | ✅ | Add, remove, reorder, reverse. **Drag-the-line-to-insert not done yet** |
+| #6 Live mode | ✅ MVP | HUD, off-route reroute, wake lock, ride GPX. No voice yet |
+| #10 Stopovers / find closest | ✅ | 12 POI categories via Overpass; "+ stop" inserts at the right place |
+| #11 Segmentation | ✅ partial | Safety and surface colouring + % bar. **Accident hotspots and crossing count not done** |
+| #7 Swipe sheet | ✅ | Drag handle: expand, collapse, dismiss |
+| Bike-network overlays | ✅ | Veloland, Mountainbikeland, Waymarked Trails |
+| #9 Scenic / time-boxed loops | ⏳ | Next. Specced below |
+
+**Verification caveat:** the build sandbox couldn't reach brouter.de, Photon, Overpass or
+the tile servers. The UI was tested end to end in headless Chromium with those APIs mocked.
+Check these against the real services:
+- swisstopo WMTS URLs (`ch.swisstopo.pixelkarte-farbe`, `ch.astra.veloland`, `ch.astra.mountainbikeland`)
+- BRouter profiles `gravel` and `mtb-zossebart`
+- the BRouter `messages` WayTags column on real routes
+
+### Next up (auto-pilot queue)
+
+1. **#9 Time-boxed loop generator**: "2 h loop from here passing a fountain".
+2. **Drag-to-insert via point** on the route line (finishes #2).
+3. **Climb list** in the elevation panel: categorised climbs, click to zoom.
+4. **Weather & wind** from Open-Meteo: headwind component per route, rain at ETA.
+5. **PWA**: installable, offline app shell, cache the route corridor's tiles before a ride.
+6. **Playwright smoke test** in CI with mocked APIs. A local script already exists in the
+   sandbox; port it to the repo.
+7. **Accident hotspots** (#11 remainder), once the geo.admin.ch layer ID is verified.
+8. **Voice turn-by-turn**: check BRouter `timode` voice hints and the Web Speech API.
+
+---
+
+## 1. Where the project stood (review of `027e535`, before v0.2.0)
 
 ### What works well
 
@@ -442,6 +484,47 @@ cycleway=lane surface=asphalt maxspeed=50`. Parse them into segments.
 - Kid / family mode: Safety profile, max gradient 6 %, more frequent playground stops.
 - Shareable ride summary image after live mode, rendered with canvas.
 - Lights-on reminder based on sunset time at ETA.
+
+### Brainstorm round 2 (after v0.2.0)
+
+**Riding & safety**
+- **"Quiet hours" routing**: penalise exposed segments more at rush hour. Use the time of
+  day to pick between `safety` and `fastbike`.
+- **Tunnel / bridge warnings** in live mode (`tunnel=yes`, `bridge=yes`, often no shoulder).
+- **Tram tracks ⚠**: Zürich's tram rails are a top cause of cycling crashes. Flag segments
+  with `railway=tram` sharing the road, and count tram-track crossings per route.
+- **Steepest-section badge** on each card ("max 14 % for 120 m"). This matters for kids'
+  trailers and cargo bikes.
+- **Cargo-bike / trailer mode**: max gradient, avoid steps and barriers
+  (`barrier=cycle_barrier`), wider-path preference.
+- **Night mode**: prefer lit ways (`lit=yes`) after sunset, and show the share of the route that is lit.
+
+**E-bike**
+- **Range rings**: "where can I get on 60 % battery and back?" Compute an isochrone with
+  BRouter's range or isochrone support (verify it's available) or a sampled ring of routes.
+- **Charge-stop planner**: if battery % > 100, automatically insert the best charging stop.
+- **Assist optimiser**: suggest Eco on the flat and Turbo only on the climbs to make the
+  battery last.
+
+**Social & data**
+- **Ride history** saved locally (IndexedDB), with personal records on recurring segments.
+- **Compare a recorded ride to the plan**: where did you deviate, and were you faster than
+  the model? Use this to auto-calibrate the rider's watts.
+- **Share a ride card** image (canvas) with the route, stats and elevation.
+- **Fountain quality**: show `drinking_water:legal`, seasonal flags, and the city of Zürich's
+  open-data fountain list (more complete than OSM in Zürich).
+
+**Multimodal**
+- **"Bail-out" button** in live mode: route to the nearest train station and show the next
+  departures (transport.opendata.ch). Bike-ticket reminder.
+- **Ride one way, train back**: plan an outbound ride and pick the return train from the
+  destination.
+
+**Developer experience**
+- **Mock-API dev mode** (`VITE_MOCK=1`) serving fixture routes, so UI work doesn't depend
+  on public APIs.
+- **Storybook-style gallery** of RouteCard, LiveHUD and RiderPanel states.
+- **Lighthouse CI** for mobile performance and accessibility budgets.
 
 ---
 
